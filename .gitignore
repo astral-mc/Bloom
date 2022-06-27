@@ -1,0 +1,7 @@
+.gradle
+.idea
+
+bloom-api
+bloom-server
+
+build
