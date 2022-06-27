@@ -1,0 +1,252 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Mon, 27 Jun 2022 23:19:26 +0300
+Subject: [PATCH] Bloom Branding
+
+
+diff --git a/build.gradle.kts b/build.gradle.kts
+index 68b8f275f9c9e77a949ca29749a05b469bcdb910..0cd1286467a33128baebe40bd0b66b34d789e906 100644
+--- a/build.gradle.kts
++++ b/build.gradle.kts
+@@ -9,8 +9,8 @@ plugins {
+ }
+ 
+ dependencies {
+-    implementation(project(":paper-api"))
+-    implementation(project(":paper-mojangapi"))
++    implementation(project(":bloom-api")) // Bloom
++    implementation("io.papermc.paper:paper-mojangapi:1.19-R0.1-SNAPSHOT") // Bloom
+     // Paper start
+     implementation("org.jline:jline-terminal-jansi:3.21.0")
+     implementation("net.minecrell:terminalconsoleappender:1.3.0")
+@@ -58,13 +58,13 @@ tasks.jar {
+     manifest {
+         val git = Git(rootProject.layout.projectDirectory.path)
+         val gitHash = git("rev-parse", "--short=7", "HEAD").getText().trim()
+-        val implementationVersion = System.getenv("BUILD_NUMBER") ?: "\"$gitHash\""
++        val implementationVersion = "\"$gitHash\"" // Bloom
+         val date = git("show", "-s", "--format=%ci", gitHash).getText().trim() // Paper
+         val gitBranch = git("rev-parse", "--abbrev-ref", "HEAD").getText().trim() // Paper
+         attributes(
+             "Main-Class" to "org.bukkit.craftbukkit.Main",
+             "Implementation-Title" to "CraftBukkit",
+-            "Implementation-Version" to "git-Paper-$implementationVersion",
++            "Implementation-Version" to "git-Bloom-Version-$implementationVersion", // Bloom
+             "Implementation-Vendor" to date, // Paper
+             "Specification-Title" to "Bukkit",
+             "Specification-Version" to project.version,
+@@ -160,11 +160,12 @@ fun TaskContainer.registerRunTask(
+         .asFile
+     javaLauncher.set(project.javaToolchains.defaultJavaLauncher(project))
+ 
+-    if (rootProject.childProjects["test-plugin"] != null) {
+-        val testPluginJar = rootProject.project(":test-plugin").tasks.jar.flatMap { it.archiveFile }
+-        inputs.file(testPluginJar)
+-        args("-add-plugin=${testPluginJar.get().asFile.absolutePath}")
+-    }
++    // Bloom - start
++//    if (rootProject.childProjects["test-plugin"] != null) {
++//        val testPluginJar = rootProject.project(":test-plugin").tasks.jar.flatMap { it.archiveFile }
++//        inputs.file(testPluginJar)
++//        args("-add-plugin=${testPluginJar.get().asFile.absolutePath}")
++//    } // Bloom - end, unused
+ 
+     args("--nogui")
+     systemProperty("net.kyori.adventure.text.warnWhenLegacyFormattingDetected", true)
+diff --git a/src/main/java/com/destroystokyo/paper/Metrics.java b/src/main/java/com/destroystokyo/paper/Metrics.java
+index 7b1843e16745ca8db2244e17490d291401f22679..1f8ebabcfed61912452e835ebd165c003357fdec 100644
+--- a/src/main/java/com/destroystokyo/paper/Metrics.java
++++ b/src/main/java/com/destroystokyo/paper/Metrics.java
+@@ -593,7 +593,7 @@ public class Metrics {
+             boolean logFailedRequests = config.getBoolean("logFailedRequests", false);
+             // Only start Metrics, if it's enabled in the config
+             if (config.getBoolean("enabled", true)) {
+-                Metrics metrics = new Metrics("Paper", serverUUID, logFailedRequests, Bukkit.getLogger());
++                Metrics metrics = new Metrics("Bloom", serverUUID, logFailedRequests, Bukkit.getLogger());
+ 
+                 metrics.addCustomChart(new Metrics.SimplePie("minecraft_version", () -> {
+                     String minecraftVersion = Bukkit.getVersion();
+@@ -603,7 +603,7 @@ public class Metrics {
+ 
+                 metrics.addCustomChart(new Metrics.SingleLineChart("players", () -> Bukkit.getOnlinePlayers().size()));
+                 metrics.addCustomChart(new Metrics.SimplePie("online_mode", () -> Bukkit.getOnlineMode() ? "online" : "offline"));
+-                metrics.addCustomChart(new Metrics.SimplePie("paper_version", () -> (Metrics.class.getPackage().getImplementationVersion() != null) ? Metrics.class.getPackage().getImplementationVersion() : "unknown"));
++                metrics.addCustomChart(new Metrics.SimplePie("bloom_version", () -> (Metrics.class.getPackage().getImplementationVersion() != null) ? Metrics.class.getPackage().getImplementationVersion() : "unknown"));
+ 
+                 metrics.addCustomChart(new Metrics.DrilldownPie("java_version", () -> {
+                     Map<String, Map<String, Integer>> map = new HashMap<>();
+diff --git a/src/main/java/com/katanamajesty/bloom/BloomVersionFetcher.java b/src/main/java/com/katanamajesty/bloom/BloomVersionFetcher.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..0441d296e9499b3e6b979353a8c8020d88ad8a12
+--- /dev/null
++++ b/src/main/java/com/katanamajesty/bloom/BloomVersionFetcher.java
+@@ -0,0 +1,98 @@
++package com.katanamajesty.bloom;
++
++import com.destroystokyo.paper.util.VersionFetcher;
++import com.google.common.base.Charsets;
++import com.google.gson.Gson;
++import com.google.gson.JsonObject;
++import com.google.gson.JsonSyntaxException;
++import io.papermc.paper.util.JarManifests;
++import net.kyori.adventure.text.Component;
++import net.kyori.adventure.text.format.NamedTextColor;
++import org.bukkit.Bukkit;
++import org.jetbrains.annotations.NotNull;
++import org.jetbrains.annotations.Nullable;
++
++import java.io.BufferedReader;
++import java.io.IOException;
++import java.io.InputStreamReader;
++import java.net.HttpURLConnection;
++import java.net.URL;
++import java.util.List;
++import java.util.jar.Manifest;
++
++public class BloomVersionFetcher implements VersionFetcher {
++
++    private final long cacheTime = 720_000;
++    private static final @NotNull String gitBranch = "ver/1.19";
++    private static final @NotNull String gitRepository = "astral-mc/Bloom";
++    private static final @NotNull String gitCommitComparison = "https://api.github.com/repos/%s/compare/%s...%s";
++
++    @Override
++    public long getCacheTime() {
++        return this.cacheTime;
++    }
++
++    @Override
++    public @NotNull Component getVersionMessage(@NotNull String serverVersion) {
++        return getRelevanceComponent();
++    }
++
++    private Component getRelevanceComponent() {
++        Manifest manifest = JarManifests.manifest(Bukkit.getServer().getClass());
++        assert manifest != null; // IDE run isn't supported
++        @Nullable final String commitHash = manifest.getMainAttributes().getValue("Git-Commit");
++
++        List<Object> commitInformation = getVersionRelevance(commitHash);
++
++        if (commitInformation == null) {
++            return Component.text("Couldn't obtain and/or compare Bloom version (You are probably using fork)");
++        } else if (commitInformation.size() == 1) {
++            int commitDistance = (int) commitInformation.get(0);
++            if (commitDistance == 0) { // Identical
++                return Component.text("Running the latest version of Bloom", NamedTextColor.GREEN);
++            } else if (commitDistance < 0) { // Behind
++                return Component.text("Running outdated version of Bloom (" + Math.abs(commitDistance) + " commits behind)", NamedTextColor.YELLOW);
++            } else { // Ahead
++                return Component.text("Probably, running on development branch of Bloom (" + commitDistance + " commits ahead)", NamedTextColor.AQUA);
++            }
++        } else { // Size 2
++            int commitsBehind = Math.abs((int) commitInformation.get(0));
++            int commitsAhead = (int) commitInformation.get(1);
++            return Component.text("Probably, running on development branch of Bloom " +
++                    "(" + commitsBehind + " commits behind and " + commitsAhead + " commits ahead)", NamedTextColor.AQUA);
++        }
++    }
++
++    // Thanks to Techcable's <Techcable@outlook.com> contribution in PaperMC/Paper GH-65
++    // returned List guaranteed to contain raw-type ints if not null
++    @Nullable
++    private List<Object> getVersionRelevance(@Nullable String commitHash) {
++        if (commitHash == null) {
++            return null;
++        }
++        try {
++            HttpURLConnection connection = (HttpURLConnection) new URL(String.format(gitCommitComparison, gitRepository, gitBranch, commitHash)).openConnection();
++            connection.connect();
++            if (connection.getResponseCode() == HttpURLConnection.HTTP_NOT_FOUND) {
++                return null;
++            }
++            try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream(), Charsets.UTF_8))) {
++                JsonObject obj = new Gson().fromJson(reader, JsonObject.class);
++                String status = obj.get("status").getAsString();
++                switch (status) {
++                    case "identical" -> { return List.of(0); }
++                    case "behind" -> { return List.of(-obj.get("behind_by").getAsInt()); } // Behind
++                    case "diverged" -> { return List.of(-obj.get("behind_by").getAsInt(), obj.get("ahead_by").getAsInt()); } // Ahead and behind by commits
++                    case "ahead" -> { return List.of(obj.get("ahead_by").getAsInt()); } // Ahead by commits
++                    default -> { return null; }
++                }
++            } catch (JsonSyntaxException | NumberFormatException e) {
++                e.printStackTrace();
++                return null;
++            }
++        } catch (IOException e) {
++            e.printStackTrace();
++            return null;
++        }
++    }
++}
+diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
+index 77cd45f616e2ff38ad6a648b8b865a99e544f3ec..5f24eb0954a7a683cb3b9955720249164127c36b 100644
+--- a/src/main/java/net/minecraft/server/MinecraftServer.java
++++ b/src/main/java/net/minecraft/server/MinecraftServer.java
+@@ -2,9 +2,6 @@ package net.minecraft.server;
+ 
+ import com.google.common.base.Splitter;
+ import com.google.common.collect.ImmutableList;
+-import co.aikar.timings.Timings;
+-import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
+-import com.google.common.base.Stopwatch;
+ import com.google.common.collect.Lists;
+ import com.google.common.collect.Maps;
+ import com.google.common.collect.Sets;
+@@ -1654,7 +1651,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+ 
+     @DontObfuscate
+     public String getServerModName() {
+-        return "Paper"; // Paper - Paper > // Spigot - Spigot > // CraftBukkit - cb > vanilla!
++        return "Bloom"; // Bloom - Bloom > // Paper - Paper > // Spigot - Spigot > // CraftBukkit - cb > vanilla!
+     }
+ 
+     public SystemReport fillSystemReport(SystemReport details) {
+diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..89ac6f9556d4db8f21ab2619d86ca4c8f2163c1a 100644
+--- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
++++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
+@@ -245,7 +245,7 @@ import javax.annotation.Nullable; // Paper
+ import javax.annotation.Nonnull; // Paper
+ 
+ public final class CraftServer implements Server {
+-    private final String serverName = "Paper"; // Paper
++    private final String serverName = "Bloom"; // Bloom // Paper
+     private final String serverVersion;
+     private final String bukkitVersion = Versioning.getBukkitVersion();
+     private final Logger logger = Logger.getLogger("Minecraft");
+diff --git a/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java b/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java
+index 7c1e510a0ad4b69c1fedc3367a8216046efb228e..007fd8ac15204623d62cd02a91a164b0fe2acbe9 100644
+--- a/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java
++++ b/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java
+@@ -361,7 +361,7 @@ public final class CraftMagicNumbers implements UnsafeValues {
+         return file.delete();
+     }
+ 
+-    private static final List<String> SUPPORTED_API = Arrays.asList("1.13", "1.14", "1.15", "1.16", "1.17", "1.18", "1.19");
++    private static final List<String> SUPPORTED_API = List.of("1.19"); // Bloom - Supported only from 1.19-R0.1-SNAPSHOT
+ 
+     @Override
+     public void checkSupported(PluginDescriptionFile pdf) throws InvalidPluginException {
+@@ -430,7 +430,7 @@ public final class CraftMagicNumbers implements UnsafeValues {
+ 
+     @Override
+     public com.destroystokyo.paper.util.VersionFetcher getVersionFetcher() {
+-        return new com.destroystokyo.paper.PaperVersionFetcher();
++        return new com.katanamajesty.bloom.BloomVersionFetcher(); // Bloom
+     }
+ 
+     @Override
+diff --git a/src/main/java/org/bukkit/craftbukkit/util/Versioning.java b/src/main/java/org/bukkit/craftbukkit/util/Versioning.java
+index 774556a62eb240da42e84db4502e2ed43495be17..1220ac8c78d86d9092b27a69d3677e6fe9e061bf 100644
+--- a/src/main/java/org/bukkit/craftbukkit/util/Versioning.java
++++ b/src/main/java/org/bukkit/craftbukkit/util/Versioning.java
+@@ -11,7 +11,7 @@ public final class Versioning {
+     public static String getBukkitVersion() {
+         String result = "Unknown-Version";
+ 
+-        InputStream stream = Bukkit.class.getClassLoader().getResourceAsStream("META-INF/maven/io.papermc.paper/paper-api/pom.properties");
++        InputStream stream = Bukkit.class.getClassLoader().getResourceAsStream("META-INF/maven/com.katanamajesty.bloom/bloom-api/pom.properties"); // Bloom
+         Properties properties = new Properties();
+ 
+         if (stream != null) {
