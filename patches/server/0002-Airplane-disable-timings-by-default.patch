@@ -1,0 +1,41 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Tue, 28 Jun 2022 19:37:36 +0300
+Subject: [PATCH] Airplane disable timings by default
+
+
+diff --git a/src/main/java/co/aikar/timings/MinecraftTimings.java b/src/main/java/co/aikar/timings/MinecraftTimings.java
+index 9da5a6086323ff4c4fd62a035fa8f7efc3d92e38..c2566f3634493c3be9817912f297ca8764691c5b 100644
+--- a/src/main/java/co/aikar/timings/MinecraftTimings.java
++++ b/src/main/java/co/aikar/timings/MinecraftTimings.java
+@@ -1,11 +1,13 @@
+ package co.aikar.timings;
+ 
+ import com.google.common.collect.MapMaker;
++import com.katanamajesty.bloom.server.BloomConfig;
+ import io.papermc.paper.configuration.GlobalConfiguration;
+ import net.minecraft.commands.CommandFunction;
+ import net.minecraft.network.protocol.Packet;
+ import net.minecraft.world.level.block.Block;
+ import net.minecraft.world.level.block.entity.BlockEntity;
++import org.bukkit.Bukkit;
+ import org.bukkit.plugin.Plugin;
+ import org.bukkit.scheduler.BukkitTask;
+ 
+@@ -173,7 +175,16 @@ public final class MinecraftTimings {
+         }
+         TimingsManager.hiddenConfigs.addAll(config.hiddenConfigEntries);
+         co.aikar.timings.Timings.setVerboseTimingsEnabled(config.verbose);
++        // Bloom start - Airplane: "Disable Paper timings by default" by Paul Sauve
++        boolean reallyEnableTimings = BloomConfig.getBoolean("timings.really-enabled", false);
++        if (config.enabled && !reallyEnableTimings) {
++            Bukkit.getLogger().warning("[Bloom]: Timings will be disabled, because timings.really-enabled flag is set to false in bloom.yml");
++            Bukkit.getLogger().warning("[Bloom]: You can still use timings by using /timings on, but they will not start on server startup");
++            Bukkit.getLogger().warning("[Bloom]: If you would like to use timings, either set timings.really-enabled to true");
++        }
++        config.enabled = reallyEnableTimings;
+         co.aikar.timings.Timings.setTimingsEnabled(config.enabled);
++        // Bloom end
+         co.aikar.timings.Timings.setHistoryInterval(config.historyInterval * 20);
+         co.aikar.timings.Timings.setHistoryLength(config.historyLength * 20);
+     }

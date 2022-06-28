@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Tue, 28 Jun 2022 20:36:18 +0300
+Subject: [PATCH] Airplane point of interest for stuck entity
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/ai/behavior/AcquirePoi.java b/src/main/java/net/minecraft/world/entity/ai/behavior/AcquirePoi.java
+index 43243537b765a2d270be6de3f053fea77ff67d18..0f8604dae2fe616a07d3cef13095f3ca8f89603d 100644
+--- a/src/main/java/net/minecraft/world/entity/ai/behavior/AcquirePoi.java
++++ b/src/main/java/net/minecraft/world/entity/ai/behavior/AcquirePoi.java
+@@ -72,6 +72,10 @@ public class AcquirePoi extends Behavior<PathfinderMob> {
+     @Override
+     protected void start(ServerLevel world, PathfinderMob entity, long time) {
+         this.nextScheduledStart = time + 20L + (long)world.getRandom().nextInt(20);
++        // Bloom start
++        if (entity.getNavigation().isStuck()) {
++            this.nextScheduledStart += 140L;
++        } // Bloom end
+         PoiManager poiManager = world.getPoiManager();
+         this.batchCache.long2ObjectEntrySet().removeIf((entry) -> {
+             return !entry.getValue().isStillValid(time);
