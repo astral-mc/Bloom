@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: KatanaMajesty <sasha.panasenk@gmail.com>
 Date: Mon, 27 Jun 2022 23:19:26 +0300
-Subject: [PATCH] Bloom Branding
+Subject: [PATCH] Added Bloom Configuration
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
@@ -53,6 +53,20 @@ index 68b8f275f9c9e77a949ca29749a05b469bcdb910..0cd1286467a33128baebe40bd0b66b34
  
      args("--nogui")
      systemProperty("net.kyori.adventure.text.warnWhenLegacyFormattingDetected", true)
+diff --git a/src/main/java/co/aikar/timings/TimingsExport.java b/src/main/java/co/aikar/timings/TimingsExport.java
+index 06bff37e4c1fddd3be6343049a66787c63fb420c..0a481c9807261b920a18a44c53d29ebbd95711de 100644
+--- a/src/main/java/co/aikar/timings/TimingsExport.java
++++ b/src/main/java/co/aikar/timings/TimingsExport.java
+@@ -241,7 +241,8 @@ public class TimingsExport extends Thread {
+         parent.put("config", createObject(
+             pair("spigot", mapAsJSON(Bukkit.spigot().getSpigotConfig(), null)),
+             pair("bukkit", mapAsJSON(Bukkit.spigot().getBukkitConfig(), null)),
+-            pair("paper", mapAsJSON(Bukkit.spigot().getPaperConfig(), null))
++            pair("paper", mapAsJSON(Bukkit.spigot().getPaperConfig(), null)),
++            pair("bloom", mapAsJSON(Bukkit.spigot().getBloomConfig(), null))
+         ));
+ 
+         new TimingsExport(listeners, parent, history).start();
 diff --git a/src/main/java/com/destroystokyo/paper/Metrics.java b/src/main/java/com/destroystokyo/paper/Metrics.java
 index 7b1843e16745ca8db2244e17490d291401f22679..1f8ebabcfed61912452e835ebd165c003357fdec 100644
 --- a/src/main/java/com/destroystokyo/paper/Metrics.java
@@ -179,6 +193,156 @@ index 0000000000000000000000000000000000000000..0441d296e9499b3e6b979353a8c8020d
 +        }
 +    }
 +}
+diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+new file mode 100644
+index 0000000000000000000000000000000000000000..2d480134723f931b8356fa848c33c5816c260863
+--- /dev/null
++++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+@@ -0,0 +1,144 @@
++package com.katanamajesty.bloom.server;
++
++import io.papermc.paper.util.JarManifests;
++import org.bukkit.Bukkit;
++import org.bukkit.configuration.InvalidConfigurationException;
++import org.bukkit.configuration.file.YamlConfiguration;
++import org.bukkit.craftbukkit.CraftServer;
++import org.jetbrains.annotations.NotNull;
++import org.jetbrains.annotations.Nullable;
++
++import java.io.File;
++import java.io.IOException;
++import java.lang.reflect.InvocationTargetException;
++import java.lang.reflect.Method;
++import java.lang.reflect.Modifier;
++import java.util.List;
++import java.util.Optional;
++import java.util.jar.Manifest;
++
++public class BloomConfig {
++
++    //    private static final String configurationFolder = ".";
++    public static @NotNull String minecraftVersion = null;
++    private static @Nullable File configurationFile = null;
++    private static final @NotNull YamlConfiguration config = new YamlConfiguration();
++    private static final @NotNull String configurationHeader = """
++            This is Bloom's main configuration file. Last commit at: %s
++            Bloom is not intended and not suitable for public use. At least not yet.
++            Be aware, that some changes may heavily affect server's stability and performance in both positive and negative meanings
++            Nevertheless, you are free to use and modify Bloom""";
++    public static int version;
++    public static boolean verbose;
++
++    public static void init(@Nullable File file) {
++        minecraftVersion = ((CraftServer) Bukkit.getServer()).getMinecraftVersion();
++        if (file == null) {
++            Bukkit.getLogger().warning("Failed to load Bloom configuration file: Couldn't find provided file");
++        }
++        configurationFile = file;
++
++        assert configurationFile != null; // should never happen in release
++        if (configurationFile.exists()) {
++            try {
++                config.load(configurationFile);
++            } catch (IOException | InvalidConfigurationException e) {
++                Bukkit.getLogger().warning("Failed to load Bloom configuration file: " + e.getLocalizedMessage());
++            }
++        }
++
++        Manifest manifest = JarManifests.manifest(Bukkit.getServer().getClass());
++        assert manifest != null; // IDE is not supported
++        @Nullable String commitDate = manifest.getMainAttributes().getValue("Implementation-Vendor");
++        if (commitDate == null) {
++            commitDate = "<Unknown>";
++        }
++        config.options().setHeader(List.of(String.format(configurationHeader, commitDate).split("\n")));
++        config.options().copyDefaults(true);
++        int defaultVersion = Integer.parseInt(minecraftVersion.replaceAll("\\.", ""));
++        Bukkit.getLogger().info("Default version value: " + defaultVersion);
++        version = config.getInt("config-version", defaultVersion);
++        BloomConfig.set("config-version", defaultVersion);
++        BloomConfig.readConfig(BloomConfig.class, null);
++    }
++
++    public static void readConfig(Class<?> clazz, Object object) {
++        for (Method method : clazz.getDeclaredMethods()) {
++            if (Modifier.isPrivate(method.getModifiers())) {
++                if (method.getParameterCount() == 0 && method.getReturnType() == Void.TYPE) {
++                    try {
++                        method.setAccessible(true);
++                        method.invoke(object);
++                        Bukkit.getLogger().info("Invoked: " + method.toGenericString());
++                    } catch (IllegalAccessException | InvocationTargetException e) {
++                        Bukkit.getLogger().warning("Error invoking " + method.toGenericString() + ": " + e.getLocalizedMessage());
++                    }
++                } else {
++                    Bukkit.getLogger().info("Parameter count isn't 0 or return type isn't void: " + method.toGenericString());
++                }
++            }
++        }
++        BloomConfig.save();
++    }
++
++    public static void save() {
++        try {
++            assert BloomConfig.configurationFile != null;
++            BloomConfig.config.save(BloomConfig.configurationFile);
++        } catch (IOException e) {
++            Bukkit.getLogger().warning("Failed to save configuration: " + e.getLocalizedMessage());
++        }
++    }
++
++    public static void set(@NotNull String path, @Nullable Object value) {
++        config.set(path, value);
++    }
++
++    public static void log(@Nullable String message) {
++        if (message != null && verbose) {
++            Bukkit.getLogger().severe(message);
++        }
++    }
++
++    public static boolean timingsReallyEnabled; // Airplane: Disable Paper timings by default by Paul Sauve
++    private static void timings() {
++        BloomConfig.timingsReallyEnabled = BloomConfig.getBoolean("timings.really-enabled", false);
++    }
++
++    public static @NotNull Optional<Object> getOptional(@NotNull String path) {
++        return Optional.ofNullable(config.get(path));
++    }
++
++    public static @Nullable Object get(@NotNull String path, @NotNull Object def) {
++        BloomConfig.config.addDefault(path, def);
++        return config.get(path, BloomConfig.config.get(path));
++    }
++
++    public static int getInt(@NotNull String path, int def) {
++        BloomConfig.config.addDefault(path, def);
++        return BloomConfig.config.getInt(path, BloomConfig.config.getInt(path));
++    }
++
++    public static boolean getBoolean(@NotNull String path, boolean def) {
++        BloomConfig.config.addDefault(path, def);
++        return BloomConfig.config.getBoolean(path, BloomConfig.config.getBoolean(path));
++    }
++
++    public static long getLong(@NotNull String path, long def) {
++        BloomConfig.config.addDefault(path, def);
++        return BloomConfig.config.getLong(path, BloomConfig.config.getLong(path));
++    }
++
++    public static double getDouble(@NotNull String path, double def) {
++        BloomConfig.config.addDefault(path, def);
++        return BloomConfig.config.getDouble(path, BloomConfig.config.getDouble(path));
++    }
++
++    public static @Nullable File getConfigurationFile() {
++        return configurationFile;
++    }
++
++    public static @NotNull YamlConfiguration getConfig() {
++        return config;
++    }
++}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
 index 77cd45f616e2ff38ad6a648b8b865a99e544f3ec..5f24eb0954a7a683cb3b9955720249164127c36b 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
@@ -202,11 +366,69 @@ index 77cd45f616e2ff38ad6a648b8b865a99e544f3ec..5f24eb0954a7a683cb3b995572024916
      }
  
      public SystemReport fillSystemReport(SystemReport details) {
+diff --git a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
+index aea18838a17fc52e1bf8cd84cd185565e6e2246d..ce3122154f8fcaa5937476e30dd93118431554da 100644
+--- a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
++++ b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
+@@ -1,20 +1,21 @@
+ package net.minecraft.server.dedicated;
+ 
+-import com.google.common.collect.Lists;
++//import com.google.common.collect.Lists; // Bloom
+ import com.mojang.authlib.GameProfile;
+ import com.mojang.datafixers.DataFixer;
+ import com.mojang.logging.LogUtils;
+-import java.io.BufferedReader;
++
++//import java.io.BufferedReader; // Bloom
+ import java.io.BufferedWriter;
+ import java.io.IOException;
+-import java.io.InputStreamReader;
++//import java.io.InputStreamReader; // Bloom
+ import java.net.InetAddress;
+ import java.net.Proxy;
+-import java.nio.charset.StandardCharsets;
++//import java.nio.charset.StandardCharsets; // Bloom
+ import java.nio.file.Files;
+ import java.nio.file.Path;
+-import java.util.Collections;
+-import java.util.List;
++//import java.util.Collections; // Bloom
++//import java.util.List; // Bloom
+ import java.util.Locale;
+ import java.util.Optional;
+ import java.util.function.BooleanSupplier;
+@@ -215,6 +216,9 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+         }
+         this.getPlayerList().loadAndSaveFiles(); // Must be after convertNames
+         // Paper end
++        // Bloom start
++        com.katanamajesty.bloom.server.BloomConfig.init((java.io.File) options.valueOf("bloom-settings"));
++        // Bloom end
+         // Paper start
+         io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
+         paperConfigurations.initializeGlobalConfiguration();
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..89ac6f9556d4db8f21ab2619d86ca4c8f2163c1a 100644
+index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..0895a49e53fc28fbb9e2eff087fe062c2be246ff 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-@@ -245,7 +245,7 @@ import javax.annotation.Nullable; // Paper
+@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
+ import com.google.common.collect.Iterators;
+ import com.google.common.collect.Lists;
+ import com.google.common.collect.MapMaker;
++import com.katanamajesty.bloom.server.BloomConfig;
+ import com.mojang.authlib.GameProfile;
+ import com.mojang.brigadier.StringReader;
+ import com.mojang.brigadier.exceptions.CommandSyntaxException;
+@@ -235,6 +236,7 @@ import org.bukkit.scheduler.BukkitWorker;
+ import org.bukkit.structure.StructureManager;
+ import org.bukkit.util.StringUtil;
+ import org.bukkit.util.permissions.DefaultPermissions;
++import org.jetbrains.annotations.NotNull;
+ import org.yaml.snakeyaml.Yaml;
+ import org.yaml.snakeyaml.constructor.SafeConstructor;
+ import org.yaml.snakeyaml.error.MarkedYAMLException;
+@@ -245,7 +247,7 @@ import javax.annotation.Nullable; // Paper
  import javax.annotation.Nonnull; // Paper
  
  public final class CraftServer implements Server {
@@ -215,6 +437,64 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..89ac6f9556d4db8f21ab2619d86ca4c8
      private final String serverVersion;
      private final String bukkitVersion = Versioning.getBukkitVersion();
      private final Logger logger = Logger.getLogger("Minecraft");
+@@ -973,6 +975,9 @@ public final class CraftServer implements Server {
+             }
+             world.spigotConfig.init(); // Spigot
+         }
++        // Bloom start
++        BloomConfig.init((File) console.options.valueOf("bloom-settings"));
++        // Bloom end
+ 
+         Plugin[] pluginClone = pluginManager.getPlugins().clone(); // Paper
+         this.pluginManager.clearPlugins();
+@@ -2716,6 +2721,13 @@ public final class CraftServer implements Server {
+             return CraftServer.this.console.paperConfigurations.createLegacyObject(CraftServer.this.console);
+         }
+ 
++        // Bloom start
++        @NotNull
++        @Override
++        public YamlConfiguration getBloomConfig() {
++            return BloomConfig.getConfig();
++        } // Bloom end
++
+         @Override
+         public void restart() {
+             org.spigotmc.RestartCommand.restart();
+diff --git a/src/main/java/org/bukkit/craftbukkit/Main.java b/src/main/java/org/bukkit/craftbukkit/Main.java
+index 1b9e91b20dd9a9375a0a2a6a4d7a0bcdce9e7b1a..b2f95bbc39d4e7a48ad3d768d9893ce26288ebd1 100644
+--- a/src/main/java/org/bukkit/craftbukkit/Main.java
++++ b/src/main/java/org/bukkit/craftbukkit/Main.java
+@@ -10,6 +10,7 @@ import java.util.List;
+ import java.util.concurrent.TimeUnit;
+ import java.util.logging.Level;
+ import java.util.logging.Logger;
++
+ import joptsimple.OptionParser;
+ import joptsimple.OptionSet;
+ import net.minecraft.util.ExceptionCollector;
+@@ -158,6 +159,21 @@ public class Main {
+                         .describedAs("Jar file");
+                 // Paper end
+ 
++                // Bloom start
++//                if (!BloomConfiguration.getConfigurationFolder().isBlank()) {
++//                    acceptsAll(asList("bloom-directory", "bloom-settings-directory"), "Bloom configuration directory")
++//                            .withRequiredArg()
++//                            .ofType(File.class)
++//                            .defaultsTo(new File(BloomConfiguration.getConfigurationFolder()))
++//                            .describedAs("Config directory");
++//                }
++                acceptsAll(asList("bloom", "bloom-settings"), "Bloom configuration file")
++                        .withRequiredArg()
++                        .ofType(File.class)
++                        .defaultsTo(new File("bloom.yml"))
++                        .describedAs("Yml file");
++                // Bloom end
++
+                 // Paper start
+                 acceptsAll(asList("server-name"), "Name of the server")
+                         .withRequiredArg()
 diff --git a/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java b/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java
 index 7c1e510a0ad4b69c1fedc3367a8216046efb228e..007fd8ac15204623d62cd02a91a164b0fe2acbe9 100644
 --- a/src/main/java/org/bukkit/craftbukkit/util/CraftMagicNumbers.java
