@@ -195,10 +195,10 @@ index 0000000000000000000000000000000000000000..0441d296e9499b3e6b979353a8c8020d
 +}
 diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..2d480134723f931b8356fa848c33c5816c260863
+index 0000000000000000000000000000000000000000..657af09a2dd77b6c79d9e8a507477ee3afec8e38
 --- /dev/null
 +++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
-@@ -0,0 +1,144 @@
+@@ -0,0 +1,141 @@
 +package com.katanamajesty.bloom.server;
 +
 +import io.papermc.paper.util.JarManifests;
@@ -221,7 +221,7 @@ index 0000000000000000000000000000000000000000..2d480134723f931b8356fa848c33c581
 +public class BloomConfig {
 +
 +    //    private static final String configurationFolder = ".";
-+    public static @NotNull String minecraftVersion = null;
++    public static String minecraftVersion;
 +    private static @Nullable File configurationFile = null;
 +    private static final @NotNull YamlConfiguration config = new YamlConfiguration();
 +    private static final @NotNull String configurationHeader = """
@@ -270,12 +270,9 @@ index 0000000000000000000000000000000000000000..2d480134723f931b8356fa848c33c581
 +                    try {
 +                        method.setAccessible(true);
 +                        method.invoke(object);
-+                        Bukkit.getLogger().info("Invoked: " + method.toGenericString());
 +                    } catch (IllegalAccessException | InvocationTargetException e) {
 +                        Bukkit.getLogger().warning("Error invoking " + method.toGenericString() + ": " + e.getLocalizedMessage());
 +                    }
-+                } else {
-+                    Bukkit.getLogger().info("Parameter count isn't 0 or return type isn't void: " + method.toGenericString());
 +                }
 +            }
 +        }
