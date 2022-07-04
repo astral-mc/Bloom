@@ -67,18 +67,35 @@ index e13fcd15ab00ab4aee7fb3774db6984743680259..d0c2758fb29b7dec2d3385656fbf202d
              // Spigot end
              // Spigot Start
 diff --git a/src/main/java/net/minecraft/server/players/SleepStatus.java b/src/main/java/net/minecraft/server/players/SleepStatus.java
-index 823efad652d8ff9e96b99375b102fef6f017716e..2bcd65184d8811244b7021c10cacfc32f4ce9922 100644
+index 823efad652d8ff9e96b99375b102fef6f017716e..88a3161fbfbdaea0029335d8eeb4106d0a07a82f 100644
 --- a/src/main/java/net/minecraft/server/players/SleepStatus.java
 +++ b/src/main/java/net/minecraft/server/players/SleepStatus.java
-@@ -20,9 +20,9 @@ public class SleepStatus {
+@@ -2,9 +2,10 @@ package net.minecraft.server.players;
+ 
+ import java.util.Iterator;
+ import java.util.List;
++import java.util.concurrent.atomic.AtomicInteger;
++
+ import net.minecraft.server.level.ServerPlayer;
+ import net.minecraft.util.Mth;
+-import net.minecraft.world.entity.player.Player;
+ 
+ public class SleepStatus {
+ 
+@@ -19,10 +20,13 @@ public class SleepStatus {
+ 
      public boolean areEnoughDeepSleeping(int percentage, List<ServerPlayer> players) {
          // CraftBukkit start
-         int j = (int) players.stream().filter((eh) -> { return eh.isSleepingLongEnough() || eh.fauxSleeping; }).count();
+-        int j = (int) players.stream().filter((eh) -> { return eh.isSleepingLongEnough() || eh.fauxSleeping; }).count();
 -        boolean anyDeepSleep = players.stream().anyMatch(Player::isSleepingLongEnough);
++        AtomicInteger ignoreSleeping = new AtomicInteger(); // Bloom - to avoid immediate night skip
++        int j = (int) players.stream().filter((eh) -> {
++            if (eh.fauxSleeping) ignoreSleeping.getAndIncrement(); return eh.isSleepingLongEnough();
++        }).count();
 +//        boolean anyDeepSleep = players.stream().anyMatch(Player::isSleepingLongEnough); // Bloom
  
 -        return anyDeepSleep && j >= this.sleepersNeeded(percentage);
-+        return /* anyDeepSleep && */ j >= this.sleepersNeeded(percentage); // Bloom - unused and odd statement
++        return j + ignoreSleeping.get() > 0 && j >= this.sleepersNeeded(percentage); // Bloom - unused and odd statement
          // CraftBukkit end
      }
  
