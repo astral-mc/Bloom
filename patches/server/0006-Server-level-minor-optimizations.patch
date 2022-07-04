@@ -1,0 +1,84 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Tue, 5 Jul 2022 00:07:22 +0300
+Subject: [PATCH] Server level minor optimizations
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index e13fcd15ab00ab4aee7fb3774db6984743680259..d0c2758fb29b7dec2d3385656fbf202d945fb4d9 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -1039,12 +1039,26 @@ public class ServerLevel extends Level implements WorldGenLevel {
+             this.server.getPlayerList().broadcastAll(new PacketPlayOutGameStateChange(PacketPlayOutGameStateChange.THUNDER_LEVEL_CHANGE, this.thunderLevel));
+         }
+         // */
++        // Bloom start
++        /*
+         for (int idx = 0; idx < this.players.size(); ++idx) {
+             if (((ServerPlayer) this.players.get(idx)).level == this) {
+                 ((ServerPlayer) this.players.get(idx)).tickWeather();
+             }
++        }*/
++        for (ServerPlayer player : this.players) {
++            if (player.level == this) {
++                player.tickWeather();
++                if (flag != this.isRaining()) {
++                    player.setPlayerWeather((!flag ? WeatherType.DOWNFALL : WeatherType.CLEAR), false);
++                }
++                player.updateWeather(this.oRainLevel, this.rainLevel, this.oThunderLevel, this.thunderLevel);
++            }
+         }
++        // Bloom end
+ 
++        // Bloom start
++        /*
+         if (flag != this.isRaining()) {
+             // Only send weather packets to those affected
+             for (int idx = 0; idx < this.players.size(); ++idx) {
+@@ -1058,7 +1072,8 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                 ((ServerPlayer) this.players.get(idx)).updateWeather(this.oRainLevel, this.rainLevel, this.oThunderLevel, this.thunderLevel);
+             }
+         }
+-        // CraftBukkit end
++        // CraftBukkit end */
++        // Bloom end
+ 
+     }
+ 
+@@ -2577,8 +2592,10 @@ public class ServerLevel extends Level implements WorldGenLevel {
+             // Spigot start
+             if ( entity instanceof Player )
+             {
+-                ServerLevel.this.getServer().levels.values().stream().map( ServerLevel::getDataStorage ).forEach( (worldData) ->
++//                ServerLevel.this.getServer().levels.values().stream().map( ServerLevel::getDataStorage ).forEach( (worldData) -> // Bloom
++                for (ServerLevel level : ServerLevel.this.getServer().levels.values()) // Bloom
+                 {
++                    DimensionDataStorage worldData = level.getDataStorage(); // Bloom
+                     for (Object o : worldData.cache.values() )
+                     {
+                         if ( o instanceof MapItemSavedData )
+@@ -2595,7 +2612,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                             }
+                         }
+                     }
+-                } );
++                }; // Bloom
+             }
+             // Spigot end
+             // Spigot Start
+diff --git a/src/main/java/net/minecraft/server/players/SleepStatus.java b/src/main/java/net/minecraft/server/players/SleepStatus.java
+index 823efad652d8ff9e96b99375b102fef6f017716e..2bcd65184d8811244b7021c10cacfc32f4ce9922 100644
+--- a/src/main/java/net/minecraft/server/players/SleepStatus.java
++++ b/src/main/java/net/minecraft/server/players/SleepStatus.java
+@@ -20,9 +20,9 @@ public class SleepStatus {
+     public boolean areEnoughDeepSleeping(int percentage, List<ServerPlayer> players) {
+         // CraftBukkit start
+         int j = (int) players.stream().filter((eh) -> { return eh.isSleepingLongEnough() || eh.fauxSleeping; }).count();
+-        boolean anyDeepSleep = players.stream().anyMatch(Player::isSleepingLongEnough);
++//        boolean anyDeepSleep = players.stream().anyMatch(Player::isSleepingLongEnough); // Bloom
+ 
+-        return anyDeepSleep && j >= this.sleepersNeeded(percentage);
++        return /* anyDeepSleep && */ j >= this.sleepersNeeded(percentage); // Bloom - unused and odd statement
+         // CraftBukkit end
+     }
+ 
