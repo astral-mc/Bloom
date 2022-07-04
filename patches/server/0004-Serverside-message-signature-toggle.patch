@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Fri, 1 Jul 2022 18:54:22 +0300
+Subject: [PATCH] Serverside message signature toggle
+
+
+diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+index 10b18fb1febbe548489fb026fdb13ca201f55f9d..1642894eba5501a7e896e73f864f3e1e19c7021b 100644
+--- a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
++++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+@@ -102,6 +102,11 @@ public class BloomConfig {
+         BloomConfig.timingsReallyEnabled = BloomConfig.getBoolean("timings.really-enabled", false);
+     }
+ 
++    public static boolean enableMessageSignatures;
++    private static void signatures() {
++        BloomConfig.enableMessageSignatures = BloomConfig.getBoolean("signatures.enable-message-signatures", false);
++    }
++
+     public static @NotNull Optional<Object> getOptional(@NotNull String path) {
+         return Optional.ofNullable(config.get(path));
+     }
+diff --git a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+index 630a762b71861bfe21c47a11d4fe05e1a3b7d339..4821d535f414da20ebed9169fb267c6bf7237b19 100644
+--- a/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
++++ b/src/main/java/net/minecraft/server/network/ServerGamePacketListenerImpl.java
+@@ -2,6 +2,7 @@ package net.minecraft.server.network;
+ 
+ import com.google.common.collect.Lists;
+ import com.google.common.primitives.Floats;
++import com.katanamajesty.bloom.server.BloomConfig;
+ import com.mojang.brigadier.ParseResults;
+ import com.mojang.brigadier.StringReader;
+ import com.mojang.brigadier.context.CommandContextBuilder;
+@@ -2217,7 +2218,7 @@ public class ServerGamePacketListenerImpl implements ServerPlayerConnection, Ser
+ 
+     private void handleChat(ServerboundChatPacket packet, FilteredText<String> message) {
+         if (this.resetLastActionTime()) {
+-            MessageSignature messagesignature = packet.getSignature(this.player.getUUID());
++            MessageSignature messagesignature = BloomConfig.enableMessageSignatures ? packet.getSignature(this.player.getUUID()) : MessageSignature.unsigned(); // Bloom
+             boolean flag = packet.signedPreview();
+             ChatDecorator chatdecorator = this.server.getChatDecorator();
+ 
+@@ -2227,7 +2228,7 @@ public class ServerGamePacketListenerImpl implements ServerPlayerConnection, Ser
+     }
+ 
+     private void broadcastChatMessage(ServerboundChatPacket packetplayinchat, FilteredText<PlayerChatMessage> filteredtext) {
+-        if (!((PlayerChatMessage) filteredtext.raw()).verify(this.player)) {
++        if (!((PlayerChatMessage) filteredtext.raw()).verify(this.player) && BloomConfig.enableMessageSignatures) { // Bloom - allow message sending if message signatures are disabled
+             ServerGamePacketListenerImpl.LOGGER.warn("{} sent message with invalid signature: '{}'", this.player.getName().getString(), ((PlayerChatMessage) filteredtext.raw()).signedContent().getString());
+         } else {
+             // CraftBukkit start

@@ -195,10 +195,10 @@ index 0000000000000000000000000000000000000000..0441d296e9499b3e6b979353a8c8020d
 +}
 diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..657af09a2dd77b6c79d9e8a507477ee3afec8e38
+index 0000000000000000000000000000000000000000..10b18fb1febbe548489fb026fdb13ca201f55f9d
 --- /dev/null
 +++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
-@@ -0,0 +1,141 @@
+@@ -0,0 +1,133 @@
 +package com.katanamajesty.bloom.server;
 +
 +import io.papermc.paper.util.JarManifests;
@@ -222,8 +222,8 @@ index 0000000000000000000000000000000000000000..657af09a2dd77b6c79d9e8a507477ee3
 +
 +    //    private static final String configurationFolder = ".";
 +    public static String minecraftVersion;
++    public static final @NotNull YamlConfiguration config = new YamlConfiguration();
 +    private static @Nullable File configurationFile = null;
-+    private static final @NotNull YamlConfiguration config = new YamlConfiguration();
 +    private static final @NotNull String configurationHeader = """
 +            This is Bloom's main configuration file. Last commit at: %s
 +            Bloom is not intended and not suitable for public use. At least not yet.
@@ -331,14 +331,6 @@ index 0000000000000000000000000000000000000000..657af09a2dd77b6c79d9e8a507477ee3
 +        BloomConfig.config.addDefault(path, def);
 +        return BloomConfig.config.getDouble(path, BloomConfig.config.getDouble(path));
 +    }
-+
-+    public static @Nullable File getConfigurationFile() {
-+        return configurationFile;
-+    }
-+
-+    public static @NotNull YamlConfiguration getConfig() {
-+        return config;
-+    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
 index 77cd45f616e2ff38ad6a648b8b865a99e544f3ec..5f24eb0954a7a683cb3b9955720249164127c36b 100644
@@ -406,18 +398,10 @@ index aea18838a17fc52e1bf8cd84cd185565e6e2246d..ce3122154f8fcaa5937476e30dd93118
          io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
          paperConfigurations.initializeGlobalConfiguration();
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..0895a49e53fc28fbb9e2eff087fe062c2be246ff 100644
+index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..bb4e983f5354e7f3f5028e6cb99a9589503942bc 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-@@ -7,6 +7,7 @@ import com.google.common.collect.ImmutableList;
- import com.google.common.collect.Iterators;
- import com.google.common.collect.Lists;
- import com.google.common.collect.MapMaker;
-+import com.katanamajesty.bloom.server.BloomConfig;
- import com.mojang.authlib.GameProfile;
- import com.mojang.brigadier.StringReader;
- import com.mojang.brigadier.exceptions.CommandSyntaxException;
-@@ -235,6 +236,7 @@ import org.bukkit.scheduler.BukkitWorker;
+@@ -235,6 +235,7 @@ import org.bukkit.scheduler.BukkitWorker;
  import org.bukkit.structure.StructureManager;
  import org.bukkit.util.StringUtil;
  import org.bukkit.util.permissions.DefaultPermissions;
@@ -425,7 +409,7 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..0895a49e53fc28fbb9e2eff087fe062c
  import org.yaml.snakeyaml.Yaml;
  import org.yaml.snakeyaml.constructor.SafeConstructor;
  import org.yaml.snakeyaml.error.MarkedYAMLException;
-@@ -245,7 +247,7 @@ import javax.annotation.Nullable; // Paper
+@@ -245,7 +246,7 @@ import javax.annotation.Nullable; // Paper
  import javax.annotation.Nonnull; // Paper
  
  public final class CraftServer implements Server {
@@ -434,17 +418,17 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..0895a49e53fc28fbb9e2eff087fe062c
      private final String serverVersion;
      private final String bukkitVersion = Versioning.getBukkitVersion();
      private final Logger logger = Logger.getLogger("Minecraft");
-@@ -973,6 +975,9 @@ public final class CraftServer implements Server {
+@@ -973,6 +974,9 @@ public final class CraftServer implements Server {
              }
              world.spigotConfig.init(); // Spigot
          }
 +        // Bloom start
-+        BloomConfig.init((File) console.options.valueOf("bloom-settings"));
++        com.katanamajesty.bloom.server.BloomConfig.init((File) console.options.valueOf("bloom-settings"));
 +        // Bloom end
  
          Plugin[] pluginClone = pluginManager.getPlugins().clone(); // Paper
          this.pluginManager.clearPlugins();
-@@ -2716,6 +2721,13 @@ public final class CraftServer implements Server {
+@@ -2716,6 +2720,13 @@ public final class CraftServer implements Server {
              return CraftServer.this.console.paperConfigurations.createLegacyObject(CraftServer.this.console);
          }
  
@@ -452,7 +436,7 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..0895a49e53fc28fbb9e2eff087fe062c
 +        @NotNull
 +        @Override
 +        public YamlConfiguration getBloomConfig() {
-+            return BloomConfig.getConfig();
++            return com.katanamajesty.bloom.server.BloomConfig.config;
 +        } // Bloom end
 +
          @Override
