@@ -1,0 +1,79 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Mon, 4 Jul 2022 19:09:31 +0300
+Subject: [PATCH] Village siege minor optimization
+
+
+diff --git a/src/main/java/net/minecraft/world/entity/ai/village/VillageSiege.java b/src/main/java/net/minecraft/world/entity/ai/village/VillageSiege.java
+index fed09b886f4fa0006d160e5f2abb00dfee45434d..54bde7cd75617863cf9b5ce82d714ff152666ed4 100644
+--- a/src/main/java/net/minecraft/world/entity/ai/village/VillageSiege.java
++++ b/src/main/java/net/minecraft/world/entity/ai/village/VillageSiege.java
+@@ -36,44 +36,47 @@ public class VillageSiege implements CustomSpawner {
+ 
+     @Override
+     public int tick(ServerLevel world, boolean spawnMonsters, boolean spawnAnimals) {
+-        if (!world.isDay() && spawnMonsters) {
++        // Start Bloom
++        if (!spawnMonsters)
++            return 0;
++
++        if (!world.isDay()) {
+             float f = world.getTimeOfDay(0.0F);
+ 
+             if ((double) f == 0.5D) {
+                 this.siegeState = world.random.nextInt(10) == 0 ? VillageSiege.State.SIEGE_TONIGHT : VillageSiege.State.SIEGE_DONE;
+             }
+ 
+-            if (this.siegeState == VillageSiege.State.SIEGE_DONE) {
++            if (this.siegeState != VillageSiege.State.SIEGE_TONIGHT)
+                 return 0;
+-            } else {
+-                if (!this.hasSetupSiege) {
+-                    if (!this.tryToSetupSiege(world)) {
+-                        return 0;
+-                    }
+ 
+-                    this.hasSetupSiege = true;
++            if (!this.hasSetupSiege) {
++                if (!this.tryToSetupSiege(world)) {
++                    this.hasSetupSiege = true; // check only once
++                    return 0;
+                 }
+ 
+-                if (this.nextSpawnTime > 0) {
+-                    --this.nextSpawnTime;
+-                    return 0;
+-                } else {
+-                    this.nextSpawnTime = 2;
+-                    if (this.zombiesToSpawn > 0) {
+-                        this.trySpawn(world);
+-                        --this.zombiesToSpawn;
+-                    } else {
+-                        this.siegeState = VillageSiege.State.SIEGE_DONE;
+-                    }
++                this.hasSetupSiege = true;
++            }
+ 
+-                    return 1;
+-                }
++            if (this.nextSpawnTime > 0) {
++                --this.nextSpawnTime;
++                return 0;
+             }
++
++            this.nextSpawnTime = 2;
++            if (this.zombiesToSpawn > 0) {
++                this.trySpawn(world);
++                --this.zombiesToSpawn;
++            } else this.siegeState = VillageSiege.State.SIEGE_DONE;
++
++            return 1;
+         } else {
+             this.siegeState = VillageSiege.State.SIEGE_DONE;
+             this.hasSetupSiege = false;
+             return 0;
+         }
++        // End Bloom
+     }
+ 
+     private boolean tryToSetupSiege(ServerLevel world) {
