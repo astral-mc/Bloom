@@ -67,14 +67,14 @@ index e13fcd15ab00ab4aee7fb3774db6984743680259..d0c2758fb29b7dec2d3385656fbf202d
              // Spigot end
              // Spigot Start
 diff --git a/src/main/java/net/minecraft/server/players/SleepStatus.java b/src/main/java/net/minecraft/server/players/SleepStatus.java
-index 823efad652d8ff9e96b99375b102fef6f017716e..88a3161fbfbdaea0029335d8eeb4106d0a07a82f 100644
+index 823efad652d8ff9e96b99375b102fef6f017716e..52dce36986c500928d5db579ba03487e4b49f61a 100644
 --- a/src/main/java/net/minecraft/server/players/SleepStatus.java
 +++ b/src/main/java/net/minecraft/server/players/SleepStatus.java
 @@ -2,9 +2,10 @@ package net.minecraft.server.players;
  
  import java.util.Iterator;
  import java.util.List;
-+import java.util.concurrent.atomic.AtomicInteger;
++import java.util.concurrent.atomic.AtomicInteger; // Bloom
 +
  import net.minecraft.server.level.ServerPlayer;
  import net.minecraft.util.Mth;
@@ -88,14 +88,14 @@ index 823efad652d8ff9e96b99375b102fef6f017716e..88a3161fbfbdaea0029335d8eeb4106d
          // CraftBukkit start
 -        int j = (int) players.stream().filter((eh) -> { return eh.isSleepingLongEnough() || eh.fauxSleeping; }).count();
 -        boolean anyDeepSleep = players.stream().anyMatch(Player::isSleepingLongEnough);
-+        AtomicInteger ignoreSleeping = new AtomicInteger(); // Bloom - to avoid immediate night skip
++        AtomicInteger ignoreSleeping = new AtomicInteger(); // Bloom
 +        int j = (int) players.stream().filter((eh) -> {
 +            if (eh.fauxSleeping) ignoreSleeping.getAndIncrement(); return eh.isSleepingLongEnough();
 +        }).count();
-+//        boolean anyDeepSleep = players.stream().anyMatch(Player::isSleepingLongEnough); // Bloom
++//        boolean anyDeepSleep = players.stream().anyMatch(Player::isSleepingLongEnough); // Bloom - remove odd iteration
  
 -        return anyDeepSleep && j >= this.sleepersNeeded(percentage);
-+        return j + ignoreSleeping.get() > 0 && j >= this.sleepersNeeded(percentage); // Bloom - unused and odd statement
++        return j > 0 && j + ignoreSleeping.get() >= this.sleepersNeeded(percentage); // Bloom
          // CraftBukkit end
      }
  
