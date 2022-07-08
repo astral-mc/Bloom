@@ -1,0 +1,51 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Sat, 9 Jul 2022 00:57:55 +0300
+Subject: [PATCH] Fix Dragon egg teleportation to the void
+
+
+diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+index c9fb7e294db3d61124172fef405705ccc0debd42..11ca33f4bfc9e4b1d5307a0d82211c3f2a687362 100644
+--- a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
++++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+@@ -103,8 +103,10 @@ public class BloomConfig {
+     }
+ 
+     public static boolean safeEndPlatform;
++    public static int dragonEggIterations;
+     private static void gameplay() {
+         BloomConfig.safeEndPlatform = BloomConfig.getBoolean("gameplay.safe-end-platform", true);
++        BloomConfig.dragonEggIterations = BloomConfig.getInt("gameplay.dragon-egg-iterations", 200);
+     }
+ 
+     public static boolean enableMessageSignatures;
+diff --git a/src/main/java/net/minecraft/world/level/block/DragonEggBlock.java b/src/main/java/net/minecraft/world/level/block/DragonEggBlock.java
+index 7e1edcc7b9f170b7c649437c2f0dd78c0bab9be4..79f7e1a3aca56c6517dcdeb0ddf63f4e48c479d6 100644
+--- a/src/main/java/net/minecraft/world/level/block/DragonEggBlock.java
++++ b/src/main/java/net/minecraft/world/level/block/DragonEggBlock.java
+@@ -41,13 +41,23 @@ public class DragonEggBlock extends FallingBlock {
+         this.teleport(state, world, pos);
+     }
+ 
++    // Bloom start
++    private boolean canTeleportToPosition(Level world, BlockPos blockPosition) {
++        for (int i = blockPosition.getY(); i > blockPosition.getY() - 8; i--) {
++            if (!world.getBlockState(new BlockPos(blockPosition.getX(), i, blockPosition.getZ())).isAir()) {
++                return true;
++            }
++        }
++        return false;
++    } // Bloom end - check if dragon egg have blocks below
++
+     private void teleport(BlockState state, Level world, BlockPos pos) {
+         WorldBorder worldborder = world.getWorldBorder();
+ 
+-        for (int i = 0; i < 1000; ++i) {
++        for (int i = 0; i < com.katanamajesty.bloom.server.BloomConfig.dragonEggIterations; ++i) { // Bloom
+             BlockPos blockposition1 = pos.offset(world.random.nextInt(16) - world.random.nextInt(16), world.random.nextInt(8) - world.random.nextInt(8), world.random.nextInt(16) - world.random.nextInt(16));
+ 
+-            if (world.getBlockState(blockposition1).isAir() && worldborder.isWithinBounds(blockposition1)) {
++            if (world.getBlockState(blockposition1).isAir() && canTeleportToPosition(world, blockposition1) && worldborder.isWithinBounds(blockposition1)) { // Bloom - Fix teleporting dragon eggs into the void
+                 // CraftBukkit start
+                 org.bukkit.block.Block from = world.getWorld().getBlockAt(pos.getX(), pos.getY(), pos.getZ());
+                 org.bukkit.block.Block to = world.getWorld().getBlockAt(blockposition1.getX(), blockposition1.getY(), blockposition1.getZ());
