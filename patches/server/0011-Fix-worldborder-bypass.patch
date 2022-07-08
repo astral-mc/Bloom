@@ -1,0 +1,83 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: l_luk <volychevk@gmail.com>
+Date: Sat, 9 Jul 2022 01:43:26 +0300
+Subject: [PATCH] Fix worldborder bypass
+
+
+diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+index 11ca33f4bfc9e4b1d5307a0d82211c3f2a687362..3172630914747a4220884006913619b6512956e3 100644
+--- a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
++++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+@@ -102,9 +102,11 @@ public class BloomConfig {
+         BloomConfig.timingsReallyEnabled = BloomConfig.getBoolean("timings.really-enabled", false);
+     }
+ 
++    public static boolean spectatorReceiveAdvancements;
+     public static boolean safeEndPlatform;
+     public static int dragonEggIterations;
+     private static void gameplay() {
++        BloomConfig.spectatorReceiveAdvancements = BloomConfig.getBoolean("gameplay.spectator-receive-advancements", false);
+         BloomConfig.safeEndPlatform = BloomConfig.getBoolean("gameplay.safe-end-platform", true);
+         BloomConfig.dragonEggIterations = BloomConfig.getInt("gameplay.dragon-egg-iterations", 200);
+     }
+diff --git a/src/main/java/net/minecraft/world/entity/projectile/ThrownEnderpearl.java b/src/main/java/net/minecraft/world/entity/projectile/ThrownEnderpearl.java
+index 23f77dfc6df93ef6a70e14a7e410263d39fae2cb..3a79c437085082a71be72927b1fbba2694150840 100644
+--- a/src/main/java/net/minecraft/world/entity/projectile/ThrownEnderpearl.java
++++ b/src/main/java/net/minecraft/world/entity/projectile/ThrownEnderpearl.java
+@@ -48,6 +48,12 @@ public class ThrownEnderpearl extends ThrowableItemProjectile {
+     protected void onHit(HitResult hitResult) {
+         super.onHit(hitResult);
+ 
++        // Bloom start
++        if (hitResult.getLocation().x > this.level.getWorldBorder().getMaxX() - 1 || hitResult.getLocation().z > this.level.getWorldBorder().getMaxZ() - 1) {
++            return;
++        }
++        // Bloom end - Fix teleport outside world border with ender pearl
++
+         for (int i = 0; i < 32; ++i) {
+             this.level.addParticle(ParticleTypes.PORTAL, this.getX(), this.getY() + this.random.nextDouble() * 2.0D, this.getZ(), this.random.nextGaussian(), 0.0D, this.random.nextGaussian());
+         }
+diff --git a/src/main/java/net/minecraft/world/item/BoatItem.java b/src/main/java/net/minecraft/world/item/BoatItem.java
+index 447e16f06c1686c2a2c6c12c856bdb937a5d050f..25aeee0e40ce0d7e837272835b2edc9e57d32f40 100644
+--- a/src/main/java/net/minecraft/world/item/BoatItem.java
++++ b/src/main/java/net/minecraft/world/item/BoatItem.java
+@@ -3,6 +3,8 @@ package net.minecraft.world.item;
+ import java.util.Iterator;
+ import java.util.List;
+ import java.util.function.Predicate;
++
++import net.minecraft.core.BlockPos;
+ import net.minecraft.stats.Stats;
+ import net.minecraft.world.InteractionHand;
+ import net.minecraft.world.InteractionResultHolder;
+@@ -58,6 +60,13 @@ public class BoatItem extends Item {
+             }
+ 
+             if (movingobjectpositionblock.getType() == HitResult.Type.BLOCK) {
++                // Bloom start
++                BlockPos blockPosition = movingobjectpositionblock.getBlockPos();
++                if (blockPosition.getX() >= world.getWorldBorder().getMaxX() - 1 || blockPosition.getZ() >= world.getWorldBorder().getMaxZ() - 1) {
++                    return InteractionResultHolder.pass(itemstack);
++                }
++                // Bloom end - Fix going outside world border with boat
++
+                 // CraftBukkit start - Boat placement
+                 org.bukkit.event.player.PlayerInteractEvent event = org.bukkit.craftbukkit.event.CraftEventFactory.callPlayerInteractEvent(user, org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK, movingobjectpositionblock.getBlockPos(), movingobjectpositionblock.getDirection(), itemstack, hand);
+ 
+diff --git a/src/main/java/net/minecraft/world/item/ChorusFruitItem.java b/src/main/java/net/minecraft/world/item/ChorusFruitItem.java
+index d38161d6266c2460666434d5f0930ecf16096977..1089381d3d0e526a45a063ae04e0b728c469c82c 100644
+--- a/src/main/java/net/minecraft/world/item/ChorusFruitItem.java
++++ b/src/main/java/net/minecraft/world/item/ChorusFruitItem.java
+@@ -33,6 +33,12 @@ public class ChorusFruitItem extends Item {
+                 double d4 = Mth.clamp(user.getY() + (double) (user.getRandom().nextInt(16) - 8), (double) world.getMinBuildHeight(), (double) (world.getMinBuildHeight() + ((ServerLevel) world).getLogicalHeight() - 1));
+                 double d5 = user.getZ() + (user.getRandom().nextDouble() - 0.5D) * 16.0D;
+ 
++                // Bloom start
++                if (d3 >= world.getWorldBorder().getMaxX() - 1 || d5 >= world.getWorldBorder().getMaxZ() - 1) {
++                    continue;
++                }
++                // Bloom end - Fix teleport outside world border with chorus fruit
++
+                 if (user.isPassenger()) {
+                     user.stopRiding();
+                 }
