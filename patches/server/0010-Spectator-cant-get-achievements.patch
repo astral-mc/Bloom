@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: l_luk <volychevk@gmail.com>
+Date: Sat, 9 Jul 2022 01:42:55 +0300
+Subject: [PATCH] Spectator cant get achievements
+
+
+diff --git a/src/main/java/net/minecraft/server/PlayerAdvancements.java b/src/main/java/net/minecraft/server/PlayerAdvancements.java
+index de0513b38e5fa0138f1cee6bb633561be12449fc..13424ad97dd6761d62112e470aa8aa619c6560f6 100644
+--- a/src/main/java/net/minecraft/server/PlayerAdvancements.java
++++ b/src/main/java/net/minecraft/server/PlayerAdvancements.java
+@@ -49,6 +49,7 @@ import net.minecraft.server.level.ServerPlayer;
+ import net.minecraft.server.players.PlayerList;
+ import net.minecraft.util.datafix.DataFixTypes;
+ import net.minecraft.world.level.GameRules;
++import net.minecraft.world.level.GameType; // Bloom
+ import org.slf4j.Logger;
+ 
+ public class PlayerAdvancements {
+@@ -274,6 +275,11 @@ public class PlayerAdvancements {
+     }
+ 
+     public boolean award(Advancement advancement, String criterionName) {
++        // Bloom start
++        if (com.katanamajesty.bloom.server.BloomConfig.spectatorReceiveAdvancements && player.gameMode.getGameModeForPlayer() == GameType.SPECTATOR) {
++            return false;
++        }
++        // Bloom end - Spectator can't get achievements
+         boolean flag = false;
+         AdvancementProgress advancementprogress = this.getOrStartProgress(advancement);
+         boolean flag1 = advancementprogress.isDone();
