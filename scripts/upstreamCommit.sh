@@ -1,33 +1,26 @@
 #!/usr/bin/env bash
+
+# requires curl & jq
+
+# upstreamCommit <baseHash> <newHash>
+# param: bashHash - the commit hash to use for comparing commits (baseHash...newHash)
+# param: newHash - the commit hash to use for comparing commits
+
 (
 set -e
 PS1="$"
 
-function changelog() {
-    base=$(git ls-tree HEAD $1  | cut -d' ' -f3 | cut -f1)
-    cd $1 && git log --oneline ${base}...HEAD | sed -E 's/(^[0-9a-f]{8,} |Revert ")#([0-9]+)/\1PR-\2/'
-}
-bukkit=$(changelog work/Bukkit)
-cb=$(changelog work/CraftBukkit)
-spigot=$(changelog work/Spigot)
+paper=$(curl -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/PaperMC/Paper/compare/$1...$2 | jq -r '.commits[] | "PaperMC/Paper@\(.sha[:7]) \(.commit.message | split("\r\n")[0] | split("\n")[0])"')
 
 updated=""
 logsuffix=""
-if [ ! -z "$bukkit" ]; then
-    logsuffix="$logsuffix\n\nBukkit Changes:\n$bukkit"
-    updated="Bukkit"
+if [ -n "$paper" ]; then
+    logsuffix="Paper Changes:\n$paper"
+    if [ -z "$updated" ]; then updated="Paper"; fi
 fi
-if [ ! -z "$cb" ]; then
-    logsuffix="$logsuffix\n\nCraftBukkit Changes:\n$cb"
-    if [ -z "$updated" ]; then updated="CraftBukkit"; else updated="$updated/CraftBukkit"; fi
-fi
-if [ ! -z "$spigot" ]; then
-    logsuffix="$logsuffix\n\nSpigot Changes:\n$spigot"
-    if [ -z "$updated" ]; then updated="Spigot"; else updated="$updated/Spigot"; fi
-fi
-disclaimer="Upstream has released updates that appear to apply and compile correctly.\nThis update has not been tested by PaperMC and as with ANY update, please do your own testing"
+disclaimer="Upstream has released updates that appear to apply and compile correctly"
 
-if [ ! -z "$1" ]; then
+if [ -n "$1" ]; then
     disclaimer="$@"
 fi
 
