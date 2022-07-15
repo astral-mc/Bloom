@@ -1,0 +1,70 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Thu, 14 Jul 2022 18:35:20 +0300
+Subject: [PATCH] Airplane reduce chunk loads by projectiles
+
+
+diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+index 1975443b99b8d01db21acb3b15d2d7d3ddf9b725..56a2b2954ba89a34b09e0ed0441d0913e044d829 100644
+--- a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
++++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+@@ -115,6 +115,13 @@ public class BloomConfig {
+         BloomConfig.witherCanGrief = BloomConfig.getBoolean("gameplay.wither-can-grief", true);
+     }
+ 
++    public static int maxChunksLoadedByProjectilesPerTick;
++    public static int maxChunksLoadedPerProjectile;
++    private static void entities() {
++        BloomConfig.maxChunksLoadedByProjectilesPerTick = BloomConfig.getInt("entity.max-chunk-loads-by-proj-per-tick", 8);
++        BloomConfig.maxChunksLoadedPerProjectile = BloomConfig.getInt("entity.max-chunk-loads-per-proj", 8);
++    }
++
+     public static boolean enableMessageSignatures;
+     private static void signatures() {
+         BloomConfig.enableMessageSignatures = BloomConfig.getBoolean("signatures.enable-message-signatures", false);
+diff --git a/src/main/java/net/minecraft/world/entity/projectile/Projectile.java b/src/main/java/net/minecraft/world/entity/projectile/Projectile.java
+index 66c3f374a779cd3a4548393ba23e9219f1caf6d3..cba05f4c58eb94d21e40de57bddccfca8b49f4c6 100644
+--- a/src/main/java/net/minecraft/world/entity/projectile/Projectile.java
++++ b/src/main/java/net/minecraft/world/entity/projectile/Projectile.java
+@@ -42,6 +42,41 @@ public abstract class Projectile extends Entity {
+         super(type, world);
+     }
+ 
++    // Bloom start - chunk load amount by projectiles optimization (from Airplane)
++    private static int loadedThisTick = 0;
++    private static int loadedTick;
++
++    private int loadedChunks = 0;
++
++    @Override
++    public void setPos(double x, double y, double z) {
++        int currentTick = net.minecraft.server.MinecraftServer.currentTick;
++        if (loadedTick != currentTick) {
++            loadedTick = currentTick;
++            loadedThisTick = 0;
++        }
++        int prevX = Mth.floor(this.getX()) >> 4;
++        int prevZ = Mth.floor(this.getZ()) >> 4;
++        int nX = Mth.floor(x) >> 4;
++        int nZ = Mth.floor(z) >> 4;
++        if (prevX != nX || prevZ != nZ) {
++            boolean isLoaded = ((net.minecraft.server.level.ServerChunkCache) this.level.getChunkSource()).isChunkLoaded(nX, nZ);
++            if (!isLoaded) { // this means, that projectile loaded new chunk
++                final int mCLBPT = com.katanamajesty.bloom.server.BloomConfig.maxChunksLoadedByProjectilesPerTick;
++                if (mCLBPT < loadedThisTick) {
++                    ++loadedChunks; // Now increment loaded chunk amount per entity
++                    final int mCLPP = com.katanamajesty.bloom.server.BloomConfig.maxChunksLoadedPerProjectile;
++                    if (loadedChunks > mCLPP) {
++                        this.discard();
++                    }
++                    return;
++                }
++                ++loadedThisTick; // increment "loaded chunks by entity" amount
++            }
++        }
++        super.setPos(x, y, z);
++    } // Bloom end
++
+     public void setOwner(@Nullable Entity entity) {
+         if (entity != null) {
+             this.ownerUUID = entity.getUUID();
