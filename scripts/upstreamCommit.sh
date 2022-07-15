@@ -18,6 +18,7 @@ if [ ! -z "paper" ]; then
     logsuffix="$logsuffix\n\nPaper Changes:\n$paper"
     updated="Paper"
 fi
+disclaimer="Upstream has released updates that appear to apply and compile correctly"
 
 log="${UP_LOG_PREFIX}Updated Upstream ($updated)\n\n${disclaimer}${logsuffix}"
 
