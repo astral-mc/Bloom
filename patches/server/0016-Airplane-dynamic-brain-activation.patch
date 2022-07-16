@@ -74,10 +74,10 @@ index 56a2b2954ba89a34b09e0ed0441d0913e044d829..e1c0107a637f2981262ef6d5c2af7c1c
 +    }
  }
 diff --git a/src/main/java/net/minecraft/world/entity/Entity.java b/src/main/java/net/minecraft/world/entity/Entity.java
-index b0728b66c54dc22a5a98f150910d07f4b38ebd7e..6e02a3a7ecc03d82413f4bddc521b607b6b185c9 100644
+index 19a64b582bc042e426220e080d9c21b3a82cf3f7..8dfe2e909a41762ce119218b2379c40698aea76f 100644
 --- a/src/main/java/net/minecraft/world/entity/Entity.java
 +++ b/src/main/java/net/minecraft/world/entity/Entity.java
-@@ -386,6 +386,9 @@ public abstract class Entity implements Nameable, EntityAccess, CommandSource {
+@@ -387,6 +387,9 @@ public abstract class Entity implements Nameable, EntityAccess, CommandSource {
      public long activatedTick = Integer.MIN_VALUE;
      public void inactiveTick() { }
      // Spigot end
@@ -224,7 +224,7 @@ index 3dd4e6d622a6daafa00ae971edd88a147e34beef..a9b7cdfa1a4922d4a5c089bf99fbb90e
          this.level.getProfiler().pop();
          this.level.getProfiler().push("tadpoleActivityUpdate");
 diff --git a/src/main/java/net/minecraft/world/entity/animal/goat/Goat.java b/src/main/java/net/minecraft/world/entity/animal/goat/Goat.java
-index 56dd01801f56c56d07101e7e22b58ac059f5f07f..fb65c2d84cac7210b21dc2dbf2117f00f49afb74 100644
+index 31be36e6b7b6bd0c0d7fda4e1b03ecd38947f3a5..99d0de70e89668fd43ad5cce85ed21232bbbf525 100644
 --- a/src/main/java/net/minecraft/world/entity/animal/goat/Goat.java
 +++ b/src/main/java/net/minecraft/world/entity/animal/goat/Goat.java
 @@ -163,10 +163,14 @@ public class Goat extends Animal {

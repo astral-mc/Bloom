@@ -20,7 +20,7 @@ if [ ! -z "paper" ]; then
 fi
 disclaimer="Upstream has released updates that appear to apply and compile correctly"
 
-log="${UP_LOG_PREFIX}Updated Upstream ($updated)\n\n${disclaimer}${logsuffix}"
+log="${UP_LOG_PREFIX}Updated \"$updated\" Upstream\n\n${disclaimer}${logsuffix}"
 
 echo -e "$log" | git commit -F -
 

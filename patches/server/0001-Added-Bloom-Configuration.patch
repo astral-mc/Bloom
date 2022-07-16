@@ -5,7 +5,7 @@ Subject: [PATCH] Added Bloom Configuration
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index 68b8f275f9c9e77a949ca29749a05b469bcdb910..0cd1286467a33128baebe40bd0b66b34d789e906 100644
+index 2374cc9bab5039d0a0dc11d4b2ec573ab75778a7..363de68dd096e2d6f47518fb9c162d3b83635b5a 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
 @@ -9,8 +9,8 @@ plugins {
@@ -35,7 +35,7 @@ index 68b8f275f9c9e77a949ca29749a05b469bcdb910..0cd1286467a33128baebe40bd0b66b34
              "Implementation-Vendor" to date, // Paper
              "Specification-Title" to "Bukkit",
              "Specification-Version" to project.version,
-@@ -160,11 +160,12 @@ fun TaskContainer.registerRunTask(
+@@ -171,11 +171,12 @@ fun TaskContainer.registerRunTask(
          .asFile
      javaLauncher.set(project.javaToolchains.defaultJavaLauncher(project))
  
@@ -333,7 +333,7 @@ index 0000000000000000000000000000000000000000..10b18fb1febbe548489fb026fdb13ca2
 +    }
 +}
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index 77cd45f616e2ff38ad6a648b8b865a99e544f3ec..5f24eb0954a7a683cb3b9955720249164127c36b 100644
+index a934226dc9a273fac03c21227f7ef3d50ea080c4..eb93af9b224afc881dc604f87bc964b2a48d1651 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -2,9 +2,6 @@ package net.minecraft.server;
@@ -356,7 +356,7 @@ index 77cd45f616e2ff38ad6a648b8b865a99e544f3ec..5f24eb0954a7a683cb3b995572024916
  
      public SystemReport fillSystemReport(SystemReport details) {
 diff --git a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
-index aea18838a17fc52e1bf8cd84cd185565e6e2246d..ce3122154f8fcaa5937476e30dd93118431554da 100644
+index b42327dcf0cc9feaf4fdb67de949dd36cf71bbaa..406c7df16abecfc0d04fc0067b3cb949548e894b 100644
 --- a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
 +++ b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
 @@ -1,20 +1,21 @@
@@ -387,21 +387,30 @@ index aea18838a17fc52e1bf8cd84cd185565e6e2246d..ce3122154f8fcaa5937476e30dd93118
  import java.util.Locale;
  import java.util.Optional;
  import java.util.function.BooleanSupplier;
-@@ -215,6 +216,9 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+@@ -218,7 +219,18 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
+             this.getProfileCache().save(false); // Paper
          }
          this.getPlayerList().loadAndSaveFiles(); // Must be after convertNames
-         // Paper end
++<<<<<<< HEAD
+         // Paper end - moved up
++=======
++        // Paper end
 +        // Bloom start
 +        com.katanamajesty.bloom.server.BloomConfig.init((java.io.File) options.valueOf("bloom-settings"));
 +        // Bloom end
-         // Paper start
-         io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
-         paperConfigurations.initializeGlobalConfiguration();
++        // Paper start
++        io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
++        paperConfigurations.initializeGlobalConfiguration();
++        paperConfigurations.initializeWorldDefaultsConfiguration();
++>>>>>>> Added Bloom Configuration
+         org.spigotmc.WatchdogThread.doStart(org.spigotmc.SpigotConfig.timeoutTime, org.spigotmc.SpigotConfig.restartOnCrash);
+         thread.start(); // Paper - start console thread after MinecraftServer.console & PaperConfig are initialized
+         io.papermc.paper.command.PaperCommands.registerCommands(this);
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..bb4e983f5354e7f3f5028e6cb99a9589503942bc 100644
+index a8cf1ab9d7504dfdb2310f1dca82324a225bea7d..8b54182ee30353cf70c2a14a756d96915ff456d5 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-@@ -235,6 +235,7 @@ import org.bukkit.scheduler.BukkitWorker;
+@@ -236,6 +236,7 @@ import org.bukkit.scheduler.BukkitWorker;
  import org.bukkit.structure.StructureManager;
  import org.bukkit.util.StringUtil;
  import org.bukkit.util.permissions.DefaultPermissions;
@@ -409,7 +418,7 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..bb4e983f5354e7f3f5028e6cb99a9589
  import org.yaml.snakeyaml.Yaml;
  import org.yaml.snakeyaml.constructor.SafeConstructor;
  import org.yaml.snakeyaml.error.MarkedYAMLException;
-@@ -245,7 +246,7 @@ import javax.annotation.Nullable; // Paper
+@@ -246,7 +247,7 @@ import javax.annotation.Nullable; // Paper
  import javax.annotation.Nonnull; // Paper
  
  public final class CraftServer implements Server {
@@ -418,7 +427,7 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..bb4e983f5354e7f3f5028e6cb99a9589
      private final String serverVersion;
      private final String bukkitVersion = Versioning.getBukkitVersion();
      private final Logger logger = Logger.getLogger("Minecraft");
-@@ -973,6 +974,9 @@ public final class CraftServer implements Server {
+@@ -975,6 +976,9 @@ public final class CraftServer implements Server {
              }
              world.spigotConfig.init(); // Spigot
          }
@@ -428,7 +437,7 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..bb4e983f5354e7f3f5028e6cb99a9589
  
          Plugin[] pluginClone = pluginManager.getPlugins().clone(); // Paper
          this.pluginManager.clearPlugins();
-@@ -2716,6 +2720,13 @@ public final class CraftServer implements Server {
+@@ -2724,6 +2728,13 @@ public final class CraftServer implements Server {
              return CraftServer.this.console.paperConfigurations.createLegacyObject(CraftServer.this.console);
          }
  
@@ -443,7 +452,7 @@ index 947bf593325cc00d9dc53ab0bf2b1b3ee578aef3..bb4e983f5354e7f3f5028e6cb99a9589
          public void restart() {
              org.spigotmc.RestartCommand.restart();
 diff --git a/src/main/java/org/bukkit/craftbukkit/Main.java b/src/main/java/org/bukkit/craftbukkit/Main.java
-index 1b9e91b20dd9a9375a0a2a6a4d7a0bcdce9e7b1a..b2f95bbc39d4e7a48ad3d768d9893ce26288ebd1 100644
+index c55ae77807e0ec3698f0d0443caaf18928b41017..9b9aa20b10321807b45a2cd402688a811b8c027a 100644
 --- a/src/main/java/org/bukkit/craftbukkit/Main.java
 +++ b/src/main/java/org/bukkit/craftbukkit/Main.java
 @@ -10,6 +10,7 @@ import java.util.List;
