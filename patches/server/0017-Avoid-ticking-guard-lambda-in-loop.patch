@@ -1,0 +1,52 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Sun, 17 Jul 2022 20:28:24 +0300
+Subject: [PATCH] Avoid ticking guard lambda in loop
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 2f32ad4c8bc6dc0f2011e3c6d1491a012f7976f1..c50c3d2903bbb6973719bee04a49da7e1bc2ae9d 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -1,5 +1,7 @@
+ package net.minecraft.server.level;
+ 
++import com.destroystokyo.paper.event.server.ServerExceptionEvent;
++import com.destroystokyo.paper.exception.ServerInternalException;
+ import com.google.common.annotations.VisibleForTesting;
+ import co.aikar.timings.TimingHistory; // Paper
+ import com.google.common.collect.Lists;
+@@ -691,7 +693,19 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                             }
+ 
+                             gameprofilerfiller.push("tick");
+-                            this.guardEntityTick(this::tickNonPassenger, entity);
++                            // Bloom start - avoid slow lambdas in loop
++                            try {
++                                this.tickNonPassenger(entity); // Bloom
++                                MinecraftServer.getServer().executeMidTickTasks(); // Paper - execute chunk tasks mid tick
++                            } catch (Throwable throwable) {
++                                if (throwable instanceof ThreadDeath) throw throwable; // Paper
++                                // Paper start - Prevent tile entity and entity crashes
++                                final String msg = String.format("Entity threw exception at %s:%s,%s,%s", entity.level.getWorld().getName(), entity.getX(), entity.getY(), entity.getZ());
++                                MinecraftServer.LOGGER.error(msg, throwable);
++                                getCraftServer().getPluginManager().callEvent(new ServerExceptionEvent(new ServerInternalException(msg, throwable)));
++                                entity.discard();
++                                // Paper end
++                            } // Bloom end
+                             gameprofilerfiller.pop();
+                         }
+                     }
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index 266603570d944f729cc7439a8564f46c8d02cc38..eadfd158616e442d14689aa1ea4518c32d475320 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -894,7 +894,7 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
+     }
+ 
+     public <T extends Entity> void guardEntityTick(Consumer<T> tickConsumer, T entity) {
+-        try {
++        try { // Bloom - diff in ServerLevel::tick
+             tickConsumer.accept(entity);
+             MinecraftServer.getServer().executeMidTickTasks(); // Paper - execute chunk tasks mid tick
+         } catch (Throwable throwable) {

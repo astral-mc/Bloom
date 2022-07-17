@@ -5,7 +5,7 @@ Subject: [PATCH] Server level minor optimizations
 
 
 diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
-index e13fcd15ab00ab4aee7fb3774db6984743680259..d0c2758fb29b7dec2d3385656fbf202d945fb4d9 100644
+index 1a918eabbaaed26d9bdf5c01e0488b5a117ba516..7e0d16fe31b297457d00d8269ffbf7910d410300 100644
 --- a/src/main/java/net/minecraft/server/level/ServerLevel.java
 +++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
 @@ -1039,12 +1039,26 @@ public class ServerLevel extends Level implements WorldGenLevel {
@@ -45,7 +45,7 @@ index e13fcd15ab00ab4aee7fb3774db6984743680259..d0c2758fb29b7dec2d3385656fbf202d
  
      }
  
-@@ -2577,8 +2592,10 @@ public class ServerLevel extends Level implements WorldGenLevel {
+@@ -2568,8 +2583,10 @@ public class ServerLevel extends Level implements WorldGenLevel {
              // Spigot start
              if ( entity instanceof Player )
              {
@@ -57,7 +57,7 @@ index e13fcd15ab00ab4aee7fb3774db6984743680259..d0c2758fb29b7dec2d3385656fbf202d
                      for (Object o : worldData.cache.values() )
                      {
                          if ( o instanceof MapItemSavedData )
-@@ -2595,7 +2612,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+@@ -2586,7 +2603,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
                              }
                          }
                      }

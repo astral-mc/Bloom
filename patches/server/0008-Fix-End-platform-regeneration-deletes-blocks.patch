@@ -27,7 +27,7 @@ index 1642894eba5501a7e896e73f864f3e1e19c7021b..c9fb7e294db3d61124172fef405705cc
      private static void signatures() {
          BloomConfig.enableMessageSignatures = BloomConfig.getBoolean("signatures.enable-message-signatures", false);
 diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
-index d0c2758fb29b7dec2d3385656fbf202d945fb4d9..5394035c1f51ad92967e984c06eeb58c80ceedb2 100644
+index 7e0d16fe31b297457d00d8269ffbf7910d410300..2f32ad4c8bc6dc0f2011e3c6d1491a012f7976f1 100644
 --- a/src/main/java/net/minecraft/server/level/ServerLevel.java
 +++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
 @@ -3,6 +3,7 @@ package net.minecraft.server.level;
@@ -59,7 +59,7 @@ index d0c2758fb29b7dec2d3385656fbf202d945fb4d9..5394035c1f51ad92967e984c06eeb58c
  import org.slf4j.Logger;
  import org.bukkit.Bukkit;
  import org.bukkit.Location;
-@@ -2419,6 +2421,14 @@ public class ServerLevel extends Level implements WorldGenLevel {
+@@ -2410,6 +2412,14 @@ public class ServerLevel extends Level implements WorldGenLevel {
          ServerLevel.makeObsidianPlatform(world, null);
      }
  
@@ -74,7 +74,7 @@ index d0c2758fb29b7dec2d3385656fbf202d945fb4d9..5394035c1f51ad92967e984c06eeb58c
      public static void makeObsidianPlatform(ServerLevel worldserver, Entity entity) {
          // CraftBukkit end
          BlockPos blockposition = ServerLevel.END_SPAWN_POINT;
-@@ -2428,12 +2438,27 @@ public class ServerLevel extends Level implements WorldGenLevel {
+@@ -2419,12 +2429,27 @@ public class ServerLevel extends Level implements WorldGenLevel {
  
          // CraftBukkit start
          org.bukkit.craftbukkit.util.BlockStateListPopulator blockList = new org.bukkit.craftbukkit.util.BlockStateListPopulator(worldserver);
