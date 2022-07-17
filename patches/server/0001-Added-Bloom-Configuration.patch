@@ -356,7 +356,7 @@ index a934226dc9a273fac03c21227f7ef3d50ea080c4..eb93af9b224afc881dc604f87bc964b2
  
      public SystemReport fillSystemReport(SystemReport details) {
 diff --git a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
-index b42327dcf0cc9feaf4fdb67de949dd36cf71bbaa..406c7df16abecfc0d04fc0067b3cb949548e894b 100644
+index b42327dcf0cc9feaf4fdb67de949dd36cf71bbaa..050d015cd705bb3df70fba8d35ace2b34a4f8ff9 100644
 --- a/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
 +++ b/src/main/java/net/minecraft/server/dedicated/DedicatedServer.java
 @@ -1,20 +1,21 @@
@@ -387,13 +387,10 @@ index b42327dcf0cc9feaf4fdb67de949dd36cf71bbaa..406c7df16abecfc0d04fc0067b3cb949
  import java.util.Locale;
  import java.util.Optional;
  import java.util.function.BooleanSupplier;
-@@ -218,7 +219,18 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
-             this.getProfileCache().save(false); // Paper
+@@ -219,6 +220,14 @@ public class DedicatedServer extends MinecraftServer implements ServerInterface
          }
          this.getPlayerList().loadAndSaveFiles(); // Must be after convertNames
-+<<<<<<< HEAD
          // Paper end - moved up
-+=======
 +        // Paper end
 +        // Bloom start
 +        com.katanamajesty.bloom.server.BloomConfig.init((java.io.File) options.valueOf("bloom-settings"));
@@ -402,7 +399,6 @@ index b42327dcf0cc9feaf4fdb67de949dd36cf71bbaa..406c7df16abecfc0d04fc0067b3cb949
 +        io.papermc.paper.util.ObfHelper.INSTANCE.getClass(); // Paper - load mappings for stacktrace deobf and etc.
 +        paperConfigurations.initializeGlobalConfiguration();
 +        paperConfigurations.initializeWorldDefaultsConfiguration();
-+>>>>>>> Added Bloom Configuration
          org.spigotmc.WatchdogThread.doStart(org.spigotmc.SpigotConfig.timeoutTime, org.spigotmc.SpigotConfig.restartOnCrash);
          thread.start(); // Paper - start console thread after MinecraftServer.console & PaperConfig are initialized
          io.papermc.paper.command.PaperCommands.registerCommands(this);
