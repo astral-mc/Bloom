@@ -1,0 +1,93 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Wed, 13 Jul 2022 02:50:05 +0300
+Subject: [PATCH] Configurable mob explosions
+
+Tmp
+
+diff --git a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+index 3172630914747a4220884006913619b6512956e3..1975443b99b8d01db21acb3b15d2d7d3ddf9b725 100644
+--- a/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
++++ b/src/main/java/com/katanamajesty/bloom/server/BloomConfig.java
+@@ -105,10 +105,14 @@ public class BloomConfig {
+     public static boolean spectatorReceiveAdvancements;
+     public static boolean safeEndPlatform;
+     public static int dragonEggIterations;
++    public static boolean creeperCanGrief;
++    public static boolean witherCanGrief;
+     private static void gameplay() {
+         BloomConfig.spectatorReceiveAdvancements = BloomConfig.getBoolean("gameplay.spectator-receive-advancements", false);
+         BloomConfig.safeEndPlatform = BloomConfig.getBoolean("gameplay.safe-end-platform", true);
+         BloomConfig.dragonEggIterations = BloomConfig.getInt("gameplay.dragon-egg-iterations", 200);
++        BloomConfig.creeperCanGrief = BloomConfig.getBoolean("gameplay.creeper-can-grief", false);
++        BloomConfig.witherCanGrief = BloomConfig.getBoolean("gameplay.wither-can-grief", true);
+     }
+ 
+     public static boolean enableMessageSignatures;
+diff --git a/src/main/java/net/minecraft/world/level/Explosion.java b/src/main/java/net/minecraft/world/level/Explosion.java
+index 01477e7240f9e33d08d416a7d40ee10f3e5d4abf..36264c6a9496789e7543b68d02d7f88818c861e1 100644
+--- a/src/main/java/net/minecraft/world/level/Explosion.java
++++ b/src/main/java/net/minecraft/world/level/Explosion.java
+@@ -5,6 +5,7 @@ import com.google.common.collect.Sets;
+ import com.mojang.datafixers.util.Pair;
+ import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+ import it.unimi.dsi.fastutil.objects.ObjectListIterator;
++import net.minecraft.world.entity.boss.EnderDragonPart;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Optional;
+@@ -21,7 +22,6 @@ import net.minecraft.util.RandomSource;
+ import net.minecraft.world.damagesource.DamageSource;
+ import net.minecraft.world.entity.Entity;
+ import net.minecraft.world.entity.LivingEntity;
+-import net.minecraft.world.entity.boss.EnderDragonPart;
+ import net.minecraft.world.entity.boss.enderdragon.EnderDragon;
+ import net.minecraft.world.entity.item.ItemEntity;
+ import net.minecraft.world.entity.item.PrimedTnt;
+@@ -288,7 +288,7 @@ public class Explosion {
+ 
+     }
+ 
+-    public void finalizeExplosion(boolean particles) {
++    public void finalizeExplosion(@Nullable Entity entity, boolean particles) { // Bloom - dirty, should be replaced
+         if (this.level.isClientSide) {
+             this.level.playLocalSound(this.x, this.y, this.z, SoundEvents.GENERIC_EXPLODE, SoundSource.BLOCKS, 4.0F, (1.0F + (this.level.random.nextFloat() - this.level.random.nextFloat()) * 0.2F) * 0.7F, false);
+         }
+@@ -303,7 +303,15 @@ public class Explosion {
+             }
+         }
+ 
++        boolean wontGrief = (entity instanceof net.minecraft.world.entity.monster.Creeper && !com.katanamajesty.bloom.server.BloomConfig.creeperCanGrief)
++                || ( (entity instanceof net.minecraft.world.entity.projectile.WitherSkull || entity instanceof net.minecraft.world.entity.boss.wither.WitherBoss) && !com.katanamajesty.bloom.server.BloomConfig.witherCanGrief); // Bloom
++
+         if (flag1) {
++            // Bloom start - configurable creeper explosion
++            if (wontGrief) {
++                this.toBlow.clear();
++                return;
++            } // Bloom end
+             ObjectArrayList<Pair<ItemStack, BlockPos>> objectarraylist = new ObjectArrayList();
+             boolean flag2 = this.getSourceMob() instanceof Player;
+ 
+@@ -398,7 +406,7 @@ public class Explosion {
+             }
+         }
+ 
+-        if (this.fire) {
++        if (this.fire && !wontGrief) { // Bloom
+             ObjectListIterator objectlistiterator1 = this.toBlow.iterator();
+ 
+             while (objectlistiterator1.hasNext()) {
+diff --git a/src/main/java/net/minecraft/world/level/Level.java b/src/main/java/net/minecraft/world/level/Level.java
+index d59dea221ba0f1b9c14f403d3c6ea61b2c454316..266603570d944f729cc7439a8564f46c8d02cc38 100644
+--- a/src/main/java/net/minecraft/world/level/Level.java
++++ b/src/main/java/net/minecraft/world/level/Level.java
+@@ -939,7 +939,7 @@ public abstract class Level implements LevelAccessor, AutoCloseable {
+         Explosion explosion = new Explosion(this, entity, damageSource, behavior, x, y, z, power, createFire, destructionType);
+ 
+         explosion.explode();
+-        explosion.finalizeExplosion(true);
++        explosion.finalizeExplosion(entity, true); // Bloom - dirty, should be replaced
+         return explosion;
+     }
+ 

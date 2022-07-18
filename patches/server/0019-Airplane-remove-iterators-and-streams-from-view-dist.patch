@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: KatanaMajesty <sasha.panasenk@gmail.com>
+Date: Sun, 17 Jul 2022 23:47:52 +0300
+Subject: [PATCH] Airplane remove iterators and streams from view distance
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ChunkMap.java b/src/main/java/net/minecraft/server/level/ChunkMap.java
+index d98c489a58c8c2e657a8879b991aa57ef78f5015..1edaf9adce3452b30cefb656011edf316a490076 100644
+--- a/src/main/java/net/minecraft/server/level/ChunkMap.java
++++ b/src/main/java/net/minecraft/server/level/ChunkMap.java
+@@ -2403,8 +2403,26 @@ public class ChunkMap extends ChunkStorage implements ChunkHolder.PlayerProvider
+             return ChunkMap.this.level.getServer().getScaledTrackingDistance(initialDistance);
+         }
+ 
++        private int getHighestRange(Entity entity, int highest) {
++            List<Entity> passengers = entity.getPassengers();
++
++            for (int i = 0; i < passengers.size(); i++) {
++                Entity entity1 = passengers.get(i);
++                int range = entity.getType().clientTrackingRange() * 16;
++                range = org.spigotmc.TrackingRange.getEntityTrackingRange(entity1, range); // Paper
++                if (range > highest) {
++                    highest = range;
++                }
++
++                highest = getHighestRange(entity1, highest);
++            }
++
++            return highest;
++        }
++
+         private int getEffectiveRange() {
+             int i = this.range;
++            /* Bloom start - avoid iterator allocation and streams;
+             Iterator iterator = this.entity.getIndirectPassengers().iterator();
+ 
+             while (iterator.hasNext()) {
+@@ -2415,7 +2433,9 @@ public class ChunkMap extends ChunkStorage implements ChunkHolder.PlayerProvider
+                 if (j > i) {
+                     i = j;
+                 }
+-            }
++            } */
++
++            i = getHighestRange(this.entity, i); // Bloom end
+ 
+             return this.scaledRange(i);
+         }
