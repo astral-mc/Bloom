@@ -6,7 +6,7 @@ Subject: [PATCH] Airplane fluid direction caching improvements
 
 diff --git a/src/main/java/com/katanamajesty/bloom/container/FluidDirectionCacheContainer.java b/src/main/java/com/katanamajesty/bloom/container/FluidDirectionCacheContainer.java
 new file mode 100644
-index 0000000000000000000000000000000000000000..9f4c32450a9bcf0d3d2e2ed3eafa9bf105917389
+index 0000000000000000000000000000000000000000..eca50612d4e60b39694cf2a9b8b0159a477b9793
 --- /dev/null
 +++ b/src/main/java/com/katanamajesty/bloom/container/FluidDirectionCacheContainer.java
 @@ -0,0 +1,116 @@
@@ -105,7 +105,7 @@ index 0000000000000000000000000000000000000000..9f4c32450a9bcf0d3d2e2ed3eafa9bf1
 +    }
 +
 +    public void forceAdd(T data, boolean flag) {
-+        int pos = HashCommon.murmurHash3(data.hashCode() & this.maxIndex); // use MurmurHash3 instead of Airplane's usage of HashCommon::mix
++        int pos = HashCommon.murmurHash3(data.hashCode()) & this.maxIndex; // use MurmurHash3 instead of Airplane's usage of HashCommon::mix
 +
 +        int removePos = pos;
 +        FluidDirectionEntry entryToRemove = cache[removePos];
